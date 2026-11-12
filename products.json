@@ -1,5 +1,5 @@
 [
-  {"id":1,"name":"Sample Product 1","price":12.00,"category":"Category A","desc":"Replace this with your product description.","image":""},
+  {"id":1,"Repro Oil Painting Vincent Van Gogh's Sunflowers ":"Sample Product 1","price":388.00,"category":"Category A","desc":"Replace this with your product description.","image":""},
   {"id":2,"name":"Sample Product 2","price":25.50,"category":"Category A","desc":"Add up to 50 products. Put photos in the images folder, e.g. images/p2.jpg","image":"images/p2.jpg"},
   {"id":3,"name":"Sample Product 3","price":8.00,"category":"Category B","desc":"Prices are in US dollars.","image":""}
 ]
