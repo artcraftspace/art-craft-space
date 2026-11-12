@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My Store</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#1f3a5f">
+<style>
+:root{--bg:#f7f6f2;--ink:#1c2430;--mut:#6b7380;--line:#dedbd2;--acc:#1f3a5f;--card:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;padding-bottom:80px}
+header{position:sticky;top:0;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));z-index:5}
+header h1{font-size:20px;margin:0}
+button{font:inherit;cursor:pointer;border:0;border-radius:8px}
+.cartbtn{background:#fff;color:var(--acc);padding:8px 14px;font-weight:600}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:12px 16px}
+.tab{background:transparent;border:1px solid var(--line);padding:6px 14px;white-space:nowrap}
+.tab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:0 16px}
+.p{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.img{aspect-ratio:1;background:#e9e6dc;display:flex;align-items:center;justify-content:center;font-size:40px;color:var(--mut);cursor:pointer}
+.img img{width:100%;height:100%;object-fit:cover}
+.pb{padding:10px;display:flex;flex-direction:column;gap:4px;flex:1}
+.pn{font-weight:600;font-size:15px}.pp{color:var(--acc);font-weight:700}
+.add{background:var(--acc);color:#fff;padding:8px;margin-top:auto}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:10}
+.sheet.on{display:flex}
+.panel{background:var(--bg);width:100%;max-height:90vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.qty button{background:#fff;border:1px solid var(--line);width:30px;height:30px}
+.qty span{display:inline-block;min-width:28px;text-align:center}
+input,textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;margin:4px 0 8px;background:#fff}
+.go{background:var(--acc);color:#fff;width:100%;padding:14px;font-weight:600;margin-top:8px}
+.x{float:right;background:none;font-size:22px}
+.mut{color:var(--mut);font-size:14px}
+</style></head><body>
+<header><h1 id="shop">My Store</h1><button class="cartbtn" id="cartbtn">Cart (0)</button></header>
+<div class="tabs" id="tabs"></div>
+<div id="grid"></div>
+
+<div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+
+<script>
+/* ====== EDIT THESE ====== */
+const CONFIG={
+  storeName:"My Store",
+  paypalUser:"",            // your PayPal.Me name, e.g. "janesmith" -> paypal.me/janesmith
+  formEndpoint:"",          // your free Formspree URL, e.g. "https://formspree.io/f/abcdwxyz"
+  orderEmail:"",            // fallback: orders open in the customer's email app
+  shipping:0                // flat shipping in USD
+};
+/* ======================== */
+const $=s=>document.querySelector(s);
+const money=n=>"$"+n.toFixed(2);
+let products=[],cat="All",cart={};
+try{cart=JSON.parse(localStorage.getItem("cart")||"{}")}catch(e){}
+const save=()=>{try{localStorage.setItem("cart",JSON.stringify(cart))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const count=()=>Object.values(cart).reduce((a,b)=>a+b,0);
+const total=()=>Object.entries(cart).reduce((t,[id,q])=>t+q*(products.find(p=>p.id==id)?.price||0),0);
+
+document.title=CONFIG.storeName;$("#shop").textContent=CONFIG.storeName;
+fetch("products.json").then(r=>r.json()).then(d=>{products=d;render()}).catch(()=>{$("#grid").innerHTML="<p>Could not load products.</p>"});
+
+function render(){
+  const cats=["All",...new Set(products.map(p=>p.category).filter(Boolean))];
+  $("#tabs").innerHTML=cats.map(c=>`<button class="tab ${c===cat?"on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+  $("#grid").innerHTML=products.filter(p=>cat==="All"||p.category===cat).map(p=>`
+    <div class="p"><div class="img" data-d="${p.id}">${p.image?`<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`:esc(p.name[0])}</div>
+    <div class="pb"><div class="pn">${esc(p.name)}</div><div class="pp">${money(p.price)}</div>
+    <button class="add" data-a="${p.id}">Add to cart</button></div></div>`).join("");
+  $("#cartbtn").textContent=`Cart (${count()})`;
+}
+function open(html){$("#panel").innerHTML=`<button class="x" data-close>×</button>`+html;$("#sheet").classList.add("on")}
+function close(){$("#sheet").classList.remove("on")}
+function detail(id){const p=products.find(x=>x.id==id);
+  open(`<h2>${esc(p.name)}</h2>${p.image?`<img src="${esc(p.image)}" style="width:100%;border-radius:10px">`:""}
+  <p class="pp">${money(p.price)}</p><p>${esc(p.desc||"")}</p><button class="go" data-a="${p.id}" data-close>Add to cart</button>`)}
+function cartView(){
+  const ids=Object.keys(cart);
+  if(!ids.length){open("<h2>Your cart</h2><p class='mut'>Your cart is empty. Add something from the store.</p>");return}
+  open(`<h2>Your cart</h2>`+ids.map(id=>{const p=products.find(x=>x.id==id);return `<div class="row"><div>${esc(p.name)}<div class="mut">${money(p.price)}</div></div>
+   <div class="qty"><button data-m="${id}">−</button><span>${cart[id]}</span><button data-p="${id}">+</button></div></div>`}).join("")+
+   `<div class="row"><b>Total</b><b>${money(total()+CONFIG.shipping)}</b></div>${CONFIG.shipping?`<div class="mut">Includes ${money(CONFIG.shipping)} shipping</div>`:""}
+   <button class="go" id="tocheckout">Check out</button>`)}
+function checkoutView(){
+  open(`<h2>Shipping details</h2><input id="n" placeholder="Full name" autocomplete="name"><input id="e" type="email" placeholder="Email" autocomplete="email">
+  <input id="ph" type="tel" placeholder="Phone" autocomplete="tel"><textarea id="ad" rows="3" placeholder="Shipping address" autocomplete="street-address"></textarea>
+  <textarea id="nt" rows="2" placeholder="Notes (optional)"></textarea>
+  <button class="go" id="place">Place order and pay ${money(total()+CONFIG.shipping)}</button><p class="mut" id="msg"></p>`)}
+async function place(){
+  const f={name:$("#n").value.trim(),email:$("#e").value.trim(),phone:$("#ph").value.trim(),address:$("#ad").value.trim(),notes:$("#nt").value.trim()};
+  if(!f.name||!f.email||!f.address){$("#msg").textContent="Please fill in your name, email and shipping address.";return}
+  const id="ORD-"+Date.now().toString(36).toUpperCase();
+  const items=Object.entries(cart).map(([i,q])=>{const p=products.find(x=>x.id==i);return `${q} x ${p.name} (${money(p.price)})`}).join("\n");
+  const amt=(total()+CONFIG.shipping).toFixed(2);
+  const body={order:id,...f,items,total:"$"+amt};
+  try{
+    if(CONFIG.formEndpoint){await fetch(CONFIG.formEndpoint,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)})}
+    else if(CONFIG.orderEmail){location.href=`mailto:${CONFIG.orderEmail}?subject=${encodeURIComponent("Order "+id)}&body=${encodeURIComponent(items+"\nTotal: $"+amt+"\n\n"+f.name+"\n"+f.phone+"\n"+f.address+"\n"+f.notes)}`}
+  }catch(e){$("#msg").textContent="Could not send your order. Check your connection and try again.";return}
+  cart={};save();render();
+  if(CONFIG.paypalUser){location.href=`https://www.paypal.me/${CONFIG.paypalUser}/${amt}USD`}
+  else open(`<h2>Order ${id} received</h2><p>Total ${money(+amt)}. We will contact you about payment.</p>`);
+}
+document.addEventListener("click",e=>{const t=e.target;
+  if(t.dataset.c){cat=t.dataset.c;render()}
+  if(t.dataset.a){cart[t.dataset.a]=(cart[t.dataset.a]||0)+1;save();render()}
+  if(t.dataset.d)detail(t.dataset.d);
+  if(t.dataset.p){cart[t.dataset.p]++;save();render();cartView()}
+  if(t.dataset.m){if(--cart[t.dataset.m]<=0)delete cart[t.dataset.m];save();render();cartView()}
+  if(t.id==="cartbtn")cartView();
+  if(t.id==="tocheckout")checkoutView();
+  if(t.id==="place")place();
+  if(t.hasAttribute("data-close")||t.id==="sheet")close();
+});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
